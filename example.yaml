@@ -1,0 +1,91 @@
+esphome:
+  name: example
+  platform: ESP8266
+  board: d1_mini
+  includes:
+    - my_matrixled_display.hpp
+
+custom_component:
+  - id: matrixled
+    lambda: |-
+      auto matrixled = new MatrixLedDisplay((AddressableLight*) id(ledstrip)->get_output(), STRIP_MODE_ZIG_ZAG_ROWS, 18, 10);
+      matrixled->set_rotation(DISPLAY_ROTATION_270_DEGREES);
+      return {matrixled};
+
+time:
+  - platform: sntp
+    id: rtc
+    timezone: Europe/Berlin
+
+display:
+  # just a dummy to load all dependencies
+
+font:
+  - id: digits
+    # 3x5 pixel font: https://www.dafont.com/de/pixelzim3x5.font
+    file: "fonts/pzim3x5.ttf"
+    size: 9
+  - id: tinyfont
+    file: "fonts/DejaVuSansMono.ttf"
+    size: 9
+
+light:
+  - platform: neopixelbus
+    pin: GPIO3
+    num_leds: 180
+    id: ledstrip
+    name: LED Matrix
+    effects:
+      - addressable_lambda:
+          name: Text Display
+          update_interval: 150ms
+          lambda: |-
+            // init display
+            static auto display = (MatrixLedDisplay *) (const_cast<custom_component::CustomComponentConstructor*>(&id(matrixled)))->get_component(0);
+            display->set_fg_color(current_color);
+            display->draw_bg(true);
+            display->clear();
+
+            // init text
+            static auto pos = 0;
+            static auto halfheight = display->get_height() / 2;
+            auto text = "This is just a test";
+            static auto font = id(tinyfont);
+            static int width;
+            static int x_offset;
+            static int baseline;
+            static int height;
+
+            // print text
+            font->measure(text, &width, &x_offset, &baseline, &height);
+            display->print(display->get_width() - pos++, halfheight, font, TextAlign::CENTER_LEFT, text);
+
+            // move text 1px to the left
+            if(pos > display->get_width() + width)
+              pos = 0;
+
+      - addressable_lambda:
+          name: Digital Clock
+          update_interval: 1s
+          lambda: |-
+            // check if time was synced with SNTP
+            auto now = id(rtc).now();
+            if(!now.is_valid())
+              return;
+
+            // init display
+            static auto display = (MatrixLedDisplay *) (const_cast<custom_component::CustomComponentConstructor*>(&id(matrixled)))->get_component(0);
+            display->set_fg_color(current_color);
+            display->draw_bg(true);
+            display->clear();
+
+            // center of display
+            static auto halfwidth = display->get_width() / 2 + 1;
+            static auto halfheight = display->get_height() / 2;
+
+            // print every digit around the center
+            display->printf(halfwidth, halfheight, id(digits), TextAlign::BOTTOM_RIGHT, "%i", now.hour / 10);
+            display->printf(halfwidth, halfheight, id(digits), TextAlign::BOTTOM_LEFT, "%i", now.hour % 10);
+            display->printf(halfwidth, halfheight + 1, id(digits), TextAlign::TOP_RIGHT, "%i", now.minute / 10);
+            display->printf(halfwidth, halfheight + 1, id(digits), TextAlign::TOP_LEFT, "%i", now.minute % 10);
+
