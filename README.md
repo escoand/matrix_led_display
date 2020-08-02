@@ -30,7 +30,7 @@ static auto display = new MatrixLedDisplay(light::AddressableLight* lights, Stri
 display->set_fg_color(light::ESPColor& color);
 
 // set background color
-display->set_fg_color(light::ESPColor& color);
+display->set_bg_color(light::ESPColor& color);
 
 // set if background should be printed
 display->draw_bg(bool draw);
