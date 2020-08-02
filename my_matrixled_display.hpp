@@ -87,6 +87,10 @@ class MatrixLedDisplay : public display::DisplayBuffer, public Component {
     return false;
   }
 
+  void update() {
+    this->lights_->schedule_show();
+  }
+
  protected:
   uint16_t get_absolute_pixel_internal(int x, int y) {
     uint16_t pos = 0;
@@ -123,9 +127,9 @@ class MatrixLedDisplay : public display::DisplayBuffer, public Component {
     }
 
     if (color) {
-      (*(this->lights_))[pos] = this->fg_color_;
+      this->lights_->get(pos).set(this->fg_color_);
     } else if (this->draw_bg_) {
-      (*(this->lights_))[pos] = this->bg_color_;
+      this->lights_->get(pos).set(this->bg_color_);
     }
   }
 
